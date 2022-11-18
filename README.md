@@ -1,7 +1,7 @@
 # Consul KV Config
 
 [![Crates.io](https://img.shields.io/crates/v/consul_kv_config.svg)](https://crates.io/crates/consul_kv_config)
-[![Build](https://github.com/theirix/consul-kv-config/actions/workflows/build.yml/badge.svg)](https://github.com/theirix/consul-kv-config/actions/workflows/build.yml)
+[![Build](https://github.com/theirix/consul_kv_config/actions/workflows/build.yml/badge.svg)](https://github.com/theirix/consul_kv_config/actions/workflows/build.yml)
 
 **consul_kv_config** is a tool to publish multiple key-value configs to the Consul KV. The tool is aimed for publishing configs in the CI in GitOps-style.
 
