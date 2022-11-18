@@ -4,6 +4,8 @@ on:
   push:
     tags:
       - '[0-9]+.[0-9]+.[0-9]+'
+    branches:
+      - "master"
 
 jobs:
   build-info:
@@ -42,7 +44,7 @@ jobs:
 
     - name: Install dependencies
       if: matrix.target == 'x86_64-unknown-linux-musl'
-      run: sudo apt-get install musl-tools
+      run: sudo apt-get install musl-tools libssl-dev
 
     - name: Build artifact
       run: cargo build --release --target=${{ matrix.target }}
@@ -75,6 +77,8 @@ jobs:
   publish:
     name: Publish to crates.io
     runs-on: ubuntu-latest
+    # Disable publishing until consul has PR merged
+    if: ${{ false }}
     steps:
       - name: Checkout sources
         uses: actions/checkout@v3
