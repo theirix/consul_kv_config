@@ -125,6 +125,10 @@ mod tests {
             KVConfig::handle_line("foo=bar").unwrap(),
             ("foo".to_string(), "bar".to_string())
         );
+        assert_eq!(
+            KVConfig::handle_line("foo = bar ").unwrap(),
+            ("foo".to_string(), "bar".to_string())
+        );
         assert!(KVConfig::handle_line("foo=").is_err());
         assert!(KVConfig::handle_line("=bar").is_err());
         assert!(KVConfig::handle_line("foo").is_err());
