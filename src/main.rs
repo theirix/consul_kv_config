@@ -67,9 +67,9 @@ fn main() -> Result<(), Error> {
         key_template: opt.key_template,
     };
 
-    let result : Result<(), Error> = match Publisher::new(config) {
+    let result: Result<(), Error> = match Publisher::new(config) {
         Ok(publisher) => publisher.process(opt.dryrun),
-        Err(err) => Err(err)
+        Err(err) => Err(err),
     };
     match result {
         Ok(_) => {

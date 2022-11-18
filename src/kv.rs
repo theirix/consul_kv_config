@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::fmt;
 use std::io::BufRead;
 use std::ops::Deref;
 use std::path::Path;
-use std::fmt;
 
 use strfmt::strfmt;
 
@@ -19,7 +19,7 @@ pub struct ServiceConfig {
 impl fmt::Display for ServiceConfig {
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(fmt, "service '{}' with env '{}'", self.service, self.env)
-}
+    }
 }
 
 impl ServiceConfig {
