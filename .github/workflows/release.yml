@@ -10,7 +10,11 @@ jobs:
     name: Build info
     runs-on: ubuntu-latest
     outputs:
-      target-prefix: consul_kv_config
+      target-prefix: ${{ steps.setVariables.outputs.output }}
+    steps:
+      - id: setVariables
+        run: |
+          echo 'output=consul_kv_config' >> $GITHUB_OUTPUT
 
   artifacts:
     name: Publish target ${{ matrix.target }}
