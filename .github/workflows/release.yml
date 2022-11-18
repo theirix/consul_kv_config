@@ -65,6 +65,7 @@ jobs:
   changelog:
     name: Changelog
     runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
     steps:
       - name: Checkout sources
         uses: actions/checkout@v3
