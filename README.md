@@ -1,9 +1,8 @@
 # Consul KV Config
 
-[![Crates.io](https://img.shields.io/crates/v/consul_kv_config.svg)](https://crates.io/crates/consul_kv_config)
 [![Build](https://github.com/theirix/consul_kv_config/actions/workflows/build.yml/badge.svg)](https://github.com/theirix/consul_kv_config/actions/workflows/build.yml)
 
-**consul_kv_config** is a tool to publish multiple key-value configs to the Consul KV. The tool is aimed for publishing configs in the CI in GitOps-style.
+**consul_kv_config** is a tool to publish multiple key-value configs to the Consul KV. The tool is aimed at publishing configs in the CI in GitOps-style.
 
 ## Installation
 
@@ -11,14 +10,14 @@ Compile from Cargo
 
     cargo install consul_kv_config
 
-or download prebuilt artefacts from GitHub reeleases.
+or download prebuilt artefacts from GitHub releases.
 
 ## Usage
 
 To publish a config file `myservice.production.conf` for the automatically detected
 service `myservice` at environment `production`, launch
 
-		consul_kv_config -c myservice.production.conf --consul-addr=http://consul.example.org:8500
+    consul_kv_config -c myservice.production.conf --consul-addr=http://consul.example.org:8500
 
 This invocation fetches all key-value pairs `KEY=VALUE` from the file and puts value `VALUE` into the `config/service/myservice/production/KEY` Consul key.
 
@@ -26,14 +25,14 @@ A config file must be named `{service}.{env}.conf` so the tool can detect servic
 
 To publish all config files (ending in `.conf`) from the specified directory, use:
 
-		consul_kv_config -c configs/
+    consul_kv_config -c configs/
 
 
 ## Advanced usage
 
-		consul_kv_config -c configs/ \
-		  --consul-addr=http://consul.example.org:8500 --consul-token=SECRET \
-			--key-template="another/template/{service}/envs/{env}/{key}"
+    consul_kv_config -c configs/ \
+        --consul-addr=http://consul.example.org:8500 --consul-token=SECRET \
+        --key-template="another/template/{service}/envs/{env}/{key}"
 
 The tool can fetch Consul address and token from the standard environment variables `CONSUL_HTTP_ADDR` and `CONSUL_HTTP_TOKEN`.
 Path template for Consul key can be overriden with a `key-template` variable.
