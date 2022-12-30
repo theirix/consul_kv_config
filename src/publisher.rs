@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 
@@ -57,11 +58,11 @@ impl Publisher {
         Ok(consul::Client::new(consul_config))
     }
 
-    /// Retrieve a set of existing keys from Consul
-    fn read_keys_from_consul(
+    /// Retrieve a set of existing keys and values from Consul
+    fn read_kv_from_consul(
         &self,
         service_config: &ServiceConfig,
-    ) -> Result<HashSet<String>, Error> {
+    ) -> Result<HashMap<String, String>, Error> {
         let consul_key_prefix = service_config.consul_key("")?;
         // Ensure it ends with / - because we need to produce pure keys without slashes
         if !consul_key_prefix.ends_with('/') {
@@ -75,32 +76,73 @@ impl Publisher {
         match res_keys
             .0
             .into_iter()
-            .map(|rec| rec.Key.strip_prefix(&consul_key_prefix).map(String::from))
-            .collect::<Option<HashSet<String>>>()
+            .map(|rec| {
+                (
+                    rec.Key.strip_prefix(&consul_key_prefix).map(String::from),
+                    rec.Value,
+                )
+            })
+            .map(|rec| match rec {
+                (Some(x), y) => Some((x, y)),
+                (None, _y) => None,
+            })
+            .collect::<Option<HashMap<String, String>>>()
         {
             Some(keys) => Ok(keys),
             None => Err(Error::Generic),
         }
     }
 
-    /// Put all keys from config to Consul
+    /// Return a list of keys that was changed in local config compared to remote `existing_kvs` in Consul
+    fn changed_keys(
+        &self,
+        service_config: &ServiceConfig,
+        existing_kvs: &HashMap<String, String>,
+    ) -> Result<HashSet<String>, Error> {
+        let mut result: HashSet<String> = HashSet::new();
+
+        for (key, value) in existing_kvs {
+            let consul_key = service_config.consul_key(key.trim_matches(' '))?;
+            let kv_pair = self.client.get(&consul_key, None).map_err(Error::Consul)?;
+            let consul_raw_value = kv_pair.0.ok_or(Error::Generic)?;
+            let consul_value = self.postprocess_value(&consul_raw_value.Value);
+            let existing_value = self.postprocess_value(value);
+            if consul_value != existing_value {
+                result.insert(key.clone());
+            }
+        }
+
+        Ok(result)
+    }
+
+    /// Put all keys from `keys` hashset from config to Consul
     fn update_keys_in_consul(
         &self,
         kv_config: &KVConfig,
         service_config: &ServiceConfig,
+        keys: &HashSet<String>,
     ) -> Result<(), Error> {
         for (key, value) in kv_config.iter() {
-            let consul_key = service_config.consul_key(key.trim_matches(' '))?;
-            let consul_val = String::from(value.trim_matches(' ').trim_matches('"'));
-            debug!("Put key {}", key);
-            let kv_pair = consul::kv::KVPair {
-                Key: consul_key,
-                Value: consul_val,
-                ..Default::default()
-            };
-            self.client.put(&kv_pair, None).map_err(Error::Consul)?;
+            if !keys.contains(key) {
+                debug!("Skip unchanged key {}", key);
+            } else {
+                let consul_key = service_config.consul_key(key.trim_matches(' '))?;
+                let consul_val = self.postprocess_value(value);
+                debug!("Put key {}", key);
+                let kv_pair = consul::kv::KVPair {
+                    Key: consul_key,
+                    Value: consul_val,
+                    ..Default::default()
+                };
+                self.client.put(&kv_pair, None).map_err(Error::Consul)?;
+            }
         }
         Ok(())
+    }
+
+    /// Postprocess value read from KV config or Consul
+    fn postprocess_value(&self, value: &str) -> String {
+        value.trim_matches(' ').trim_matches('"').into()
     }
 
     /// Remove specified keys (like in KV config, not full) from Consul
@@ -184,18 +226,21 @@ impl Publisher {
         );
 
         let kv_config = KVConfig::new(config_path)?;
-        let existing_keys = self.read_keys_from_consul(&service_config)?;
+        let existing_kvs = self.read_kv_from_consul(&service_config)?;
+        let changed_keys = self.changed_keys(&service_config, &existing_kvs)?;
+        let existing_keys: HashSet<String> = existing_kvs.keys().cloned().collect();
         let removed_keys = kv_config.missing_keys(&existing_keys);
 
         info!(
-            "Read {} keys from config, found {} keys in Consul, will delete {}",
+            "Read {} keys from config, found {} keys in Consul, will update {}, will delete {}",
             kv_config.iter().len(),
             existing_keys.len(),
+            &changed_keys.len(),
             removed_keys.len()
         );
 
         if !dryrun {
-            self.update_keys_in_consul(&kv_config, &service_config)?;
+            self.update_keys_in_consul(&kv_config, &service_config, &changed_keys)?;
             info!("Updated keys in consul");
 
             self.remove_keys_from_consul(&removed_keys, &service_config)?;
