@@ -188,7 +188,7 @@ impl Publisher {
                     cap.name("env").unwrap().as_str().to_string(),
                 )
             })
-            .ok_or_else(|| Error::Template(format!("Cannot parse filename {}", filename)))
+            .ok_or_else(|| Error::Template(format!("Cannot parse filename {filename}")))
     }
 
     /// Read config files in a directory
