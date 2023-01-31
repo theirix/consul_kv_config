@@ -6,6 +6,8 @@ use consul::kv::KV;
 use consul::Client;
 use regex::Regex;
 
+use base64::{engine::general_purpose, Engine as _};
+
 use log::{debug, info, warn};
 
 use crate::config::Config;
@@ -97,16 +99,25 @@ impl Publisher {
     fn changed_keys(
         &self,
         service_config: &ServiceConfig,
-        existing_kvs: &HashMap<String, String>,
+        kv_config: &KVConfig,
     ) -> Result<HashSet<String>, Error> {
         let mut result: HashSet<String> = HashSet::new();
 
-        for (key, value) in existing_kvs {
+        for key in kv_config.keys() {
             let consul_key = service_config.consul_key(key.trim_matches(' '))?;
             let kv_pair = self.client.get(&consul_key, None).map_err(Error::Consul)?;
+
+            // Remote value from consul
             let consul_raw_value = kv_pair.0.ok_or(Error::Generic)?;
-            let consul_value = self.postprocess_value(&consul_raw_value.Value);
-            let existing_value = self.postprocess_value(value);
+            let decoded: Vec<u8> = general_purpose::STANDARD
+                .decode(consul_raw_value.Value)
+                .map_err(|_| Error::Generic)?;
+            let consul_value_str = std::str::from_utf8(&decoded).map_err(|_| Error::Generic)?;
+            let consul_value = self.postprocess_value(consul_value_str);
+
+            // Local value from kv config
+            let config_value = kv_config.get(key).ok_or(Error::Generic)?;
+            let existing_value = self.postprocess_value(config_value);
             if consul_value != existing_value {
                 result.insert(key.clone());
             }
@@ -227,7 +238,7 @@ impl Publisher {
 
         let kv_config = KVConfig::new(config_path)?;
         let existing_kvs = self.read_kv_from_consul(&service_config)?;
-        let changed_keys = self.changed_keys(&service_config, &existing_kvs)?;
+        let changed_keys = self.changed_keys(&service_config, &kv_config)?;
         let existing_keys: HashSet<String> = existing_kvs.keys().cloned().collect();
         let removed_keys = kv_config.missing_keys(&existing_keys);
 
