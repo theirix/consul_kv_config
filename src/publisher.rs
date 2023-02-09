@@ -105,22 +105,30 @@ impl Publisher {
 
         for key in kv_config.keys() {
             let consul_key = service_config.consul_key(key.trim_matches(' '))?;
-            let kv_pair = self.client.get(&consul_key, None).map_err(Error::Consul)?;
+            let resp = self.client.get(&consul_key, None);
+            match resp {
+                Ok(kv_pair) => {
+                    // Remote value from consul
+                    let consul_raw_value = kv_pair.0.ok_or(Error::Generic)?;
+                    let decoded: Vec<u8> = general_purpose::STANDARD
+                        .decode(consul_raw_value.Value)
+                        .map_err(|_| Error::Generic)?;
+                    let consul_value_str =
+                        std::str::from_utf8(&decoded).map_err(|_| Error::Generic)?;
+                    let consul_value = self.postprocess_value(consul_value_str);
 
-            // Remote value from consul
-            let consul_raw_value = kv_pair.0.ok_or(Error::Generic)?;
-            let decoded: Vec<u8> = general_purpose::STANDARD
-                .decode(consul_raw_value.Value)
-                .map_err(|_| Error::Generic)?;
-            let consul_value_str = std::str::from_utf8(&decoded).map_err(|_| Error::Generic)?;
-            let consul_value = self.postprocess_value(consul_value_str);
-
-            // Local value from kv config
-            let config_value = kv_config.get(key).ok_or(Error::Generic)?;
-            let existing_value = self.postprocess_value(config_value);
-            if consul_value != existing_value {
-                result.insert(key.clone());
-            }
+                    // Local value from kv config
+                    let config_value = kv_config.get(key).ok_or(Error::Generic)?;
+                    let existing_value = self.postprocess_value(config_value);
+                    if consul_value != existing_value {
+                        result.insert(key.clone());
+                    }
+                }
+                Err(_) => {
+                    // Treat 404 (consul-rust says "Failed to parse JSON response") as a missing value
+                    result.insert(key.clone());
+                }
+            };
         }
 
         Ok(result)
