@@ -153,7 +153,7 @@ impl Publisher {
                     Value: consul_val,
                     ..Default::default()
                 };
-                self.client.put(&kv_pair, None).map_err(Error::Consul)?;
+                self.client.put_raw(&kv_pair, None).map_err(Error::Consul)?;
             }
         }
         Ok(())
