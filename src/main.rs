@@ -15,7 +15,7 @@ struct Opt {
     /// Consul address
     #[structopt(
         long = "consul-addr",
-        default_value = "localhost:8500",
+        default_value = "http://localhost:8500",
         env = "CONSUL_HTTP_ADDR"
     )]
     consul_addr: String,
