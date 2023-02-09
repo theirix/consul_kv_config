@@ -19,6 +19,7 @@ thiserror = "1.0.37"
 strfmt = "0.2.2"
 regex = "1.7.0"
 base64 = "0.21.0"
+derive_more = "0.99.17"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 openssl = { version = "*", features = ["vendored"] }
