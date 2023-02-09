@@ -4,6 +4,7 @@ use std::path::{Path, PathBuf};
 
 use consul::kv::KV;
 use consul::Client;
+use derive_more::Add;
 use regex::Regex;
 
 use base64::{engine::general_purpose, Engine as _};
@@ -14,6 +15,15 @@ use crate::config::Config;
 use crate::error::Error;
 use crate::kv::KVConfig;
 use crate::kv::ServiceConfig;
+
+/// Config publishing statistics
+#[derive(Default, Add)]
+pub struct PublishStats {
+    count: usize,
+    changed: usize,
+    existing: usize,
+    removed: usize,
+}
 
 /// Config publisher
 pub struct Publisher {
@@ -218,7 +228,7 @@ impl Publisher {
     }
 
     /// Process one KV config file
-    pub fn handle_config(&self, config_path: &Path, dryrun: bool) -> Result<(), Error> {
+    pub fn handle_config(&self, config_path: &Path, dryrun: bool) -> Result<PublishStats, Error> {
         // Get service and env from config if given. Otherwise parse from filename
         let (service, env): (String, String) =
             if let (Some(the_service), Some(the_env)) = (&self.config.service, &self.config.env) {
@@ -266,7 +276,12 @@ impl Publisher {
             info!("Removed keys from consul");
         }
 
-        Ok(())
+        Ok(PublishStats {
+            count: kv_config.iter().len(),
+            existing: existing_keys.len(),
+            changed: changed_keys.len(),
+            removed: removed_keys.len(),
+        })
     }
 
     // Entry point
@@ -282,12 +297,21 @@ impl Publisher {
             vec![self.root_path.clone()]
         };
         config_paths.sort();
+        let configs_count = &config_paths.len();
         // Handle each config file
-        info!("Processing {} files", config_paths.len());
-        config_paths
+        info!("Processing {} files", configs_count);
+        let per_config_stats = config_paths
             .into_iter()
             .map(|config_path| self.handle_config(&config_path, dryrun))
             .collect::<Result<Vec<_>, Error>>()?;
+        let total_stats = per_config_stats
+            .into_iter()
+            .fold(PublishStats::default(), |acc, item| acc + item);
+        info!(
+            "For {} files found {} keys, updated {}, deleted {}",
+            configs_count, total_stats.count, total_stats.changed, total_stats.removed,
+        );
+
         Ok(())
     }
 }
