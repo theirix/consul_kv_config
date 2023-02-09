@@ -6,6 +6,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2023-02-09
+### Added
+- Publishing statistics
+### Fixed
+- Detecting updated values
+- Use default consul address with http scheme
+
 ## [0.4.0] - 2023-01-31
 ### Fixed
 - Detecting updated values
