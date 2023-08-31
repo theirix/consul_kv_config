@@ -75,6 +75,7 @@ impl Publisher {
         &self,
         service_config: &ServiceConfig,
     ) -> Result<HashMap<String, String>, Error> {
+        debug!("Reading existing keyset");
         let consul_key_prefix = service_config.consul_key("")?;
         // Ensure it ends with / - because we need to produce pure keys without slashes
         if !consul_key_prefix.ends_with('/') {
@@ -111,6 +112,7 @@ impl Publisher {
         service_config: &ServiceConfig,
         kv_config: &KVConfig,
     ) -> Result<HashSet<String>, Error> {
+        debug!("Deduce changed keys");
         let mut result: HashSet<String> = HashSet::new();
 
         for key in kv_config.keys() {
@@ -151,6 +153,7 @@ impl Publisher {
         service_config: &ServiceConfig,
         keys: &HashSet<String>,
     ) -> Result<(), Error> {
+        debug!("Put keys to Consul");
         for (key, value) in kv_config.iter() {
             if !keys.contains(key) {
                 debug!("Skip unchanged key {}", key);

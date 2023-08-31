@@ -1,3 +1,4 @@
+use log::debug;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::fmt;
@@ -73,6 +74,7 @@ impl KVConfig {
             // skip items starting with underscore
             .filter(|(k, _)| !k.starts_with('_') && !k.starts_with('#'))
             .collect();
+        debug!("Read {} keys", hash_map.len());
         Ok(KVConfig { kv: hash_map })
     }
 
