@@ -58,7 +58,6 @@ impl KVConfig {
         let file = std::fs::File::open(file_path).map_err(Error::ConfigFile)?;
         let res_lines: Result<Vec<_>, _> = std::io::BufReader::new(file)
             .lines()
-            .into_iter()
             .map(|line| Self::handle_line(&line.unwrap()))
             .collect();
         let lines: Vec<_> = res_lines?;

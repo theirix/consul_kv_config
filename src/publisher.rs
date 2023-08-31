@@ -216,7 +216,6 @@ impl Publisher {
     fn enumerate_files(&self) -> Result<Vec<PathBuf>, std::io::Error> {
         self.root_path
             .read_dir()?
-            .into_iter()
             // drop non-conformant files
             .filter(|res| {
                 res.as_ref()
