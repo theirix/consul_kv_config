@@ -61,7 +61,7 @@ impl KVConfig {
             .into_iter()
             .map(|line| Self::handle_line(&line.unwrap()))
             .collect();
-        let lines: Vec<_> = res_lines.map_err(|_| Error::Generic)?;
+        let lines: Vec<_> = res_lines?;
         let mut keys = HashSet::new();
         // Do not allow duplicate keys
         for (key, _) in &lines {
