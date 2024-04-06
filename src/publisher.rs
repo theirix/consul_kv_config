@@ -200,7 +200,7 @@ impl Publisher {
 
     /// Deduce service and env from confug filename
     fn deduce_service_env_from_filename(filename: &String) -> Result<(String, String), Error> {
-        let re: Regex = Regex::new(r"^(?P<service>[[:alnum:]_]+)\.(?P<env>[[:alnum:]_]+)\.conf$")
+        let re: Regex = Regex::new(r"^(?P<service>[[:alnum:]_-]+)\.(?P<env>[[:alnum:]_-]+)\.conf$")
             .map_err(|_| Error::Generic)?;
         re.captures(filename)
             .map(|cap| {
@@ -343,5 +343,10 @@ mod tests {
             &"myservice.second.myenv.conf".to_owned()
         )
         .is_err());
+        res = Publisher::deduce_service_env_from_filename(&"my-service.my-env123.conf".to_owned());
+        assert_eq!(
+            res.unwrap(),
+            ("my-service".to_string(), "my-env123".to_string())
+        );
     }
 }
