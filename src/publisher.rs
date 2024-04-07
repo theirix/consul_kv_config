@@ -229,25 +229,42 @@ impl Publisher {
             .collect()
     }
 
-    /// Process one KV config file
-    pub fn handle_config(&self, config_path: &Path, dryrun: bool) -> Result<PublishStats, Error> {
-        // Get service and env from config if given. Otherwise parse from filename
-        let (service, env): (String, String) =
-            if let (Some(the_service), Some(the_env)) = (&self.config.service, &self.config.env) {
-                info!("Use service and env name from command line");
-                (the_service.clone(), the_env.clone())
-            } else {
-                info!("Use service and env name from config filename");
-                Self::deduce_service_env_from_filename(
-                    &config_path
-                        .file_name()
-                        .unwrap()
-                        .to_str()
-                        .unwrap()
-                        .to_string(),
-                )?
-            };
+    /// Parse service and env from config path to a tuple of (path, service, env)
+    pub fn parse_config_paths<'a>(
+        &self,
+        config_path: &'a Path,
+    ) -> Result<(&'a Path, String, String), Error> {
+        if let (Some(the_service), Some(the_env)) = (&self.config.service, &self.config.env) {
+            let (service, env) = (the_service.clone(), the_env.clone());
+            info!(
+                "Use service {} and env {} name from command line",
+                &service, &env
+            );
+            Ok((config_path, service, env))
+        } else {
+            let config_filename: String = config_path
+                .file_name()
+                .unwrap()
+                .to_str()
+                .unwrap()
+                .to_string();
+            let (the_service, the_env) = Self::deduce_service_env_from_filename(&config_filename)?;
+            info!(
+                "Use service {} and env {} name from config filename",
+                &the_service, &the_env
+            );
+            Ok((config_path, the_service, the_env))
+        }
+    }
 
+    /// Process one KV config file
+    pub fn handle_config(
+        &self,
+        config_path: &Path,
+        service: String,
+        env: String,
+        dryrun: bool,
+    ) -> Result<PublishStats, Error> {
         let service_config = ServiceConfig::new(self.config.key_template.clone(), service, env);
 
         info!(
@@ -302,9 +319,29 @@ impl Publisher {
         let configs_count = &config_paths.len();
         // Handle each config file
         info!("Processing {} files", configs_count);
-        let per_config_stats = config_paths
+        let parsed_paths: Vec<(&Path, String, String)> = config_paths
+            .iter()
+            .map(|config_path| self.parse_config_paths(config_path))
+            .collect::<Result<Vec<_>, Error>>()?;
+        info!("Found {} config paths", &parsed_paths.len());
+        let filtered_parsed_paths: Vec<(&Path, String, String)> = parsed_paths
             .into_iter()
-            .map(|config_path| self.handle_config(&config_path, dryrun))
+            .filter(
+                |(_config_path, _service, env)| match &self.config.filter_env {
+                    Some(filter_env) => env == filter_env,
+                    None => true,
+                },
+            )
+            .collect();
+        info!(
+            "Found {} filtered config paths",
+            &filtered_parsed_paths.len()
+        );
+        let per_config_stats = filtered_parsed_paths
+            .into_iter()
+            .map(|(config_path, service, env)| {
+                self.handle_config(config_path, service, env, dryrun)
+            })
             .collect::<Result<Vec<_>, Error>>()?;
         let total_stats = per_config_stats
             .into_iter()

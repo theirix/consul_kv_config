@@ -32,6 +32,10 @@ struct Opt {
     #[structopt(short, long)]
     env: Option<String>,
 
+    /// Filter by environment
+    #[structopt(short, long)]
+    filter_env: Option<String>,
+
     /// Dry run mode (no writes done)
     #[structopt(short, long)]
     dryrun: bool,
@@ -64,6 +68,7 @@ fn main() -> Result<(), Error> {
         config_path: opt.config_path,
         service: opt.service,
         env: opt.env,
+        filter_env: opt.filter_env,
         key_template: opt.key_template,
     };
 
