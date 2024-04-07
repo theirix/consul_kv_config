@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.0] - 2024-04-07
+### Added
+- Add filter-env parameter for filtering by environment
+
 ## [0.7.0] - 2024-04-06
 ### Fixed
 - Allow dashes in service and env
