@@ -146,7 +146,7 @@ mod tests {
             "my".to_string(),
             "MYENV".to_string(),
         )
-        .consul_key(&"KEY".to_string());
+        .consul_key("KEY");
         assert!(res.is_ok());
         assert_eq!(res.unwrap(), "config/my_x_MYENV*KEY");
     }
@@ -159,7 +159,7 @@ mod tests {
             "my".to_string(),
             "MYENV".to_string(),
         )
-        .consul_key(&"KEY".to_string());
+        .consul_key("KEY");
         assert!(res.is_ok());
     }
 }
