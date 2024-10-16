@@ -20,6 +20,8 @@ strfmt = "0.2.2"
 regex = "1.7.0"
 base64 = "0.21.0"
 derive_more = "0.99.17"
+# match a dependency version of consul crate to enable error introspection
+reqwest = { version = "0.11.14", features = ["blocking", "json"] }
 
 [target.'cfg(target_os = "linux")'.dependencies]
 openssl = { version = "*", features = ["vendored"] }
