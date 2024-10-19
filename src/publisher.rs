@@ -8,7 +8,6 @@ use consul::kv::KV;
 use consul::Client;
 use derive_more::Add;
 use regex::Regex;
-use reqwest;
 use std::time::Duration;
 
 use log::{debug, info, warn};
