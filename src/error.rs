@@ -10,6 +10,8 @@ pub enum Error {
     Consul(#[from] consul::errors::Error),
     #[error("template error: {0}")]
     Template(String),
+    #[error("Consul is unreachable")]
+    Unreachable,
     #[error("unknown error")]
     Generic,
 }

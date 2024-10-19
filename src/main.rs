@@ -50,6 +50,10 @@ struct Opt {
         default_value = "config/service/{service}/{env}/{key}"
     )]
     key_template: String,
+
+    /// Timeout for Consul to be ready in seconds
+    #[structopt(short, long, default_value = "60")]
+    timeout: u64,
 }
 
 fn main() -> Result<(), Error> {
@@ -70,6 +74,7 @@ fn main() -> Result<(), Error> {
         env: opt.env,
         filter_env: opt.filter_env,
         key_template: opt.key_template,
+        timeout: opt.timeout,
     };
 
     let result: Result<(), Error> = match Publisher::new(config) {

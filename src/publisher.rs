@@ -1,13 +1,15 @@
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
+use std::time::Instant;
 
+use base64::{engine::general_purpose, Engine as _};
 use consul::kv::KV;
 use consul::Client;
 use derive_more::Add;
 use regex::Regex;
-
-use base64::{engine::general_purpose, Engine as _};
+use reqwest;
+use std::time::Duration;
 
 use log::{debug, info, warn};
 
@@ -30,6 +32,23 @@ pub struct Publisher {
     client: Client,
     root_path: PathBuf,
     config: Config,
+}
+
+/// Checks if a Consul connection error, represented by `consul::errors::Error`,
+/// is caused by a connection-related `reqwest::Error`.
+/// Note that the exact same type of `reqwest::Error` must be imported
+/// as the one used in `consul_kv`. This is ensured in Cargo.toml.
+fn is_connection_error(error: &dyn std::error::Error) -> bool {
+    let mut source = error.source();
+    while let Some(err) = source {
+        if let Some(re) = err.downcast_ref::<reqwest::Error>() {
+            if re.is_connect() || re.is_timeout() {
+                return true;
+            }
+        }
+        source = err.source();
+    }
+    false
 }
 
 impl Publisher {
@@ -303,11 +322,38 @@ impl Publisher {
         })
     }
 
+    /// Waits until Consul is available, but no longer than the specified duration
+    fn wait_consul(&self, max_wait: Duration) -> Result<(), Error> {
+        let deadline = Instant::now() + max_wait;
+        loop {
+            if Instant::now() > deadline {
+                return Err(Error::Unreachable);
+            }
+            match self.client.list("", None) {
+                Ok(_) => {
+                    info!("Consul is alive");
+                    return Ok(());
+                }
+                Err(err) => {
+                    if is_connection_error(&err) {
+                        info!("Cannot access Consul, retrying...");
+                        std::thread::sleep(Duration::from_secs(5));
+                    } else {
+                        return Err(Error::Consul(err));
+                    }
+                }
+            };
+        }
+    }
+
     // Entry point
     pub fn process(&self, dryrun: bool) -> Result<(), Error> {
         if dryrun {
             warn!("Running in dryrun mode, no changes allowed");
         }
+
+        // Wait for Consul to be ready
+        self.wait_consul(Duration::from_secs(self.config.timeout))?;
 
         // Collect config files
         let mut config_paths: Vec<PathBuf> = if self.root_path.is_dir() {

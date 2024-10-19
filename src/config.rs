@@ -7,4 +7,5 @@ pub struct Config {
     pub filter_env: Option<String>,
     pub config_path: String,
     pub key_template: String,
+    pub timeout: u64,
 }
